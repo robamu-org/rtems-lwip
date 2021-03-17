@@ -94,10 +94,8 @@ def copyFiles(isforward):
         for f in files['files-to-import']:
             dst_dir = os.path.join(os.path.abspath(LWIP_DIR), *f.split('/')[:-1])
             dst_file = os.path.join(dst_dir, f.split('/')[-1])
-            try:
+            if not os.path.exists(dst_dir):
                 os.makedirs(dst_dir)
-            except FileExistsError:
-                pass
             if not os.path.exists(dst_file):
                 Path(dst_file).touch()
                 print(dst_file)
