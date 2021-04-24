@@ -47,6 +47,7 @@
 #define __LWIPOPTS_H__
 
 #include "conf_app.h"
+#include "bsp.h"
 
 /**
  * SYS_LIGHTWEIGHT_PROT==1: if you want inter-task protection for certain
@@ -71,10 +72,10 @@
 
 /* MEM_SIZE: the size of the heap memory. If the application will send
 a lot of data that needs to be copied, this should be set high. */
-#define MEM_SIZE                    (10*1024)
+#define MEM_SIZE                    (8*1024)
 
-/* Relocate the LwIP RAM heap pointer */
-#define LWIP_RAM_HEAP_POINTER       (0x30044000)
+/* Relocate the LwIP RAM heap pointer. Place in SRAM3 */
+#define LWIP_RAM_HEAP_POINTER       (0x30040000)
 
 /* MEMP_NUM_PBUF: the number of memp struct pbufs. If the application
    sends a lot of data out of ROM (or other static memory), this
@@ -134,14 +135,11 @@ a lot of data that needs to be copied, this should be set high. */
 /* TCP receive window. */
 #define TCP_WND                     (2*TCP_MSS)
 
-
 /* ---------- ICMP options ---------- */
 #define LWIP_ICMP                   1
 
-
 /* ---------- DHCP options ---------- */
 #define LWIP_DHCP                   1
-
 
 /* ---------- UDP options ---------- */
 #define LWIP_UDP                    1
@@ -256,8 +254,8 @@ The STM32H7xx allows computing and verifying the IP, UDP, TCP and ICMP checksums
    ---------------------------------
 */
 
-#define TCPIP_THREAD_NAME              "TCP/IP"
-#define TCPIP_THREAD_STACKSIZE          1000
+#define TCPIP_THREAD_NAME              "LWIP"
+#define TCPIP_THREAD_STACKSIZE          RTEMS_MINIMUM_STACK_SIZE
 #define TCPIP_MBOX_SIZE                 6
 #define DEFAULT_UDP_RECVMBOX_SIZE       6
 #define DEFAULT_TCP_RECVMBOX_SIZE       6
@@ -282,6 +280,8 @@ The STM32H7xx allows computing and verifying the IP, UDP, TCP and ICMP checksums
 #define ETH_MAC_ADDR     { ETH_MAC_ADDR0, ETH_MAC_ADDR1, \
                            ETH_MAC_ADDR2, ETH_MAC_ADDR3, \
                            ETH_MAC_ADDR4, ETH_MAC_ADDR5 }
+
+/* #undef LWIP_DEBUG */
 
 #endif /* __LWIPOPTS_H__ */
 

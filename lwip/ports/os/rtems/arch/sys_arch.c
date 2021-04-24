@@ -283,7 +283,9 @@ sys_thread_new(const char *name, lwip_thread_fn function, void *arg, int stack_s
     if(name[0] == '\0') {
       lwip_task_name = rtems_build_name('L', 'W', 'I', 'P');
     }
-    lwip_task_name = rtems_build_name(name[0], name[1], name[2], name[3]);
+    else {
+      lwip_task_name = rtems_build_name(name[0], name[1], name[2], name[3]);
+    }
   }
 
   res = rtems_task_create(
