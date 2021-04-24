@@ -57,8 +57,9 @@ extern "C" {
  * @param   mac_addr            Can be set to NULL to use default mac address
  * @param   netif_status_cb     Callback function which will be called if the network
  *                              link status changes
- * @return SUCCESS if initialization successful.\n
- *         FAILURE if module already initialized.
+ * @return
+ *  - SUCCESS if initialization successful.\n
+ *  - NETIF_ADD_ERR Error adding net interface.
  */
 int8_t rtems_lwip_init(uint8_t *mac_addr, netif_status_callback_fn netif_status_cb);
 
@@ -71,9 +72,14 @@ struct netif *rtems_lwip_get_netif(uint32_t instance_number);
  * @brief   Print information about the assigned DHCP address.
  */
 void rtems_lwip_print_dhcp_info(void);
+
+void rtems_lwip_convert_ip_to_decimal_str(ip_addr_t ip, uint8_t *ip_str);
+
 int rtems_lwip_get_netif_status_cmd(int argc, char *arg[]);
+
 void rtems_lwip_set_hwaddr(struct netif *netif, uint8_t *mac_addr);
-void rtems_lwip_get_hwaddr_str(struct netif *netif, uint8_t *macStr);
+
+void rtems_lwip_get_hwaddr_str(struct netif *netif, uint8_t *mac_str);
 
 /**
  * @brief   Determines a static IP address from the configuration files.

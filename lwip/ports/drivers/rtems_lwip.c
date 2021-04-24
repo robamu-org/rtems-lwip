@@ -180,24 +180,25 @@ rtems_lwip_set_hwaddr(struct netif *netif, uint8_t *mac_addr)
 }
 
 void
-rtems_lwip_get_hwaddr_str(struct netif *netif, uint8_t *macStr)
+rtems_lwip_get_hwaddr_str(struct netif *netif, uint8_t *mac_str)
 {
   uint8_t index, outindex = 0;
   char ch;
 
   for (index = 0; index < netif->hwaddr_len; index++) {
     if (index)
-      macStr[outindex++] = ':';
+      mac_str[outindex++] = ':';
     ch = (netif->hwaddr[index] >> 4);
-    macStr[outindex++] = (ch < 10) ? (ch + '0') : (ch - 10 + 'A');
+    mac_str[outindex++] = (ch < 10) ? (ch + '0') : (ch - 10 + 'A');
     ch = (netif->hwaddr[index] & 0xf);
-    macStr[outindex++] = (ch < 10) ? (ch + '0') : (ch - 10 + 'A');
+    mac_str[outindex++] = (ch < 10) ? (ch + '0') : (ch - 10 + 'A');
   }
-  macStr[outindex] = 0;
+  mac_str[outindex] = 0;
 }
 
-void rtems_lwip_determine_static_ipv4_address(ip4_addr_t* ip_addr, ip4_addr_t* netmask,
-        ip4_addr_t* gw_addr) {
+void
+rtems_lwip_determine_static_ipv4_address(ip4_addr_t* ip_addr, ip4_addr_t* netmask,
+    ip4_addr_t* gw_addr) {
 #if STATIC_IP_ADDRESS == 1
 
 #if CALCULATE_ETH_IP_ADDR == 1
@@ -223,4 +224,18 @@ void rtems_lwip_determine_static_ipv4_address(ip4_addr_t* ip_addr, ip4_addr_t* n
   ip_addr_set_zero_ip4(netmask);
   ip_addr_set_zero_ip4(gw_addr);
 #endif /* STATIC_IP_ADDRESS == 0 */
+}
+
+void
+rtems_lwip_convert_ip_to_decimal_str(ip_addr_t ip, uint8_t *ip_str)
+{
+  uint32_t addr;
+ #if LWIP_IPV6
+  addr = ip.u_addr.ip4.addr;
+ #else
+  addr = ip.addr;
+ #endif
+
+  snprintf((char *)ip_str, 16, "%lu.%lu.%lu.%lu",
+           (addr >> 24), ((addr >> 16) & 0xff), ((addr >> 8) & 0xff), (addr & 0xff));
 }
