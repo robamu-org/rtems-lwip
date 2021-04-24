@@ -31,53 +31,48 @@
  * Based on work of Carlos Jenkins, Rostislav Lisovy, Jan Dolezal
  */
 
-//#define DEBUG 1
-#include "lwip/tcpip.h" /* includes - lwip/opt.h, lwip/api_msg.h, lwip/netifapi.h, lwip/pbuf.h, lwip/api.h, lwip/sys.h, lwip/timers.h, lwip/netif.h */
+#include "rtems_lwip.h"
+#include "rtems_lwip_conf.h"
+
+#include "lwip/init.h"
 #include "lwip/stats.h"
 #include "lwip/dhcp.h"
+#include "netif/ethernet.h"
+
+#if LWIP_NETIF_API == 1
 #include "lwip/netifapi.h"
-#include "netif/etharp.h" /* includes - lwip/ip.h, lwip/netif.h, lwip/ip_addr.h, lwip/pbuf.h */
-#include "eth_lwip_default.h"
-#include "eth_lwip.h"
-#include "tms570_netif.h"
+#endif
+
+#if NO_SYS == 0
+#include "lwip/tcpip.h"
+#endif
+
 #include <stdio.h>
+
+#define SUCCESS ERR_OK
+#define FAILURE ERR_IF
+
+/* Assigned in specific port */
+extern netif_init_fn eth_lwip_init_fnc;
 
 /* The lwIP network interface structure for the Ethernet EMAC. */
 #ifndef MAX_EMAC_INSTANCE
 #define MAX_EMAC_INSTANCE           1
 #endif /*MAX_EMAC_INSTANCE*/
+struct netif eth_lwip_netifs[MAX_EMAC_INSTANCE];
 
-#define SUCCESS ERR_OK
-#define FAILURE ERR_IF
-
-static struct netif eth_lwip_netifs[MAX_EMAC_INSTANCE];
-static void eth_lwip_conv_IP_decimal_Str(ip_addr_t ip, uint8_t *ipStr);
-
-
-void
-eth_lwip_get_dhcp_info(void)
-{
-  struct netif *netif = eth_lwip_get_netif(0);
-
-  if (dhcp_supplied_address(netif)) {
-    uint8_t ipString[16]; // FIXME change the functions to use char
-    eth_lwip_conv_IP_decimal_Str(netif->ip_addr, ipString);
-    printf("Address: %s\n", ipString);
-    eth_lwip_conv_IP_decimal_Str(netif->netmask, ipString);
-    printf("Netmask: %s\n", ipString);
-    eth_lwip_conv_IP_decimal_Str(netif->gw, ipString);
-    printf("Gateway: %s\n", ipString);
-  } else {
-    printf("dhcp not bound\n");
-  }
-}
+//static void rtems_lwip_conv_ip_decimal_str(ip_addr_t ip, char *ipStr);
 
 int8_t
-eth_lwip_init(uint8_t *mac_addr)
+rtems_lwip_init(uint8_t *mac_addr, netif_status_callback_fn netif_status_cb)
 {
   unsigned int instance_number = 0;
-  int8_t retVal = SUCCESS;
+  int8_t retval = SUCCESS;
 
+#if NO_SYS == 1
+  /* Initialize the lwIP stack */
+  lwip_init();
+#endif
 
   ip4_addr_t ip_addr;
   ip4_addr_t net_mask;
@@ -89,61 +84,75 @@ eth_lwip_init(uint8_t *mac_addr)
   if (mac_addr == NULL)
     mac_addr = default_mac;             /* use default MAC */
 
-  eth_lwip_set_hwaddr(netif, mac_addr);
-  tcpip_init(NULL, NULL);
+  rtems_lwip_set_hwaddr(netif, mac_addr);
 
-#if STATIC_IP_ADDRESS
-  ip_addr.addr = htonl(ETH_IP_ADDR);
-  net_mask.addr = htonl(ETH_NETMASK);
-  gw_addr.addr = htonl(ETH_GW);
+#if NO_SYS == 0
+  tcpip_init(NULL, NULL);
+#endif
+
+  rtems_lwip_determine_static_ipv4_address(&ip_addr, &net_mask, &gw_addr);
+
+  netif_input_fn netif_input_fnc = NULL;
+#if NO_SYS == 1
+  netif_input_fnc = &ethernet_input;
 #else
-  ip_addr.addr = 0;
-  net_mask.addr = 0;
-  gw_addr.addr = 0;
+  netif_input_fnc = &tcpip_input;
 #endif
 
   netif_tmp = netif_add(netif, &ip_addr, &net_mask, &gw_addr,
-                        NULL, ETH_LWIP_INIT_NETIF_FNC, tcpip_input);
+                        NULL, eth_lwip_init_fnc, netif_input_fnc);
 
   if (netif_tmp == NULL)
     return NETIF_ADD_ERR;
 
   netif_set_default(netif);
+
+#if LWIP_NETIF_API == 1
   netifapi_netif_set_up(netif);
-#if !STATIC_IP_ADDRESS
+#endif
+
+#if LWIP_NETIF_LINK_CALLBACK
+  if(netif_status_cb != NULL) {
+    netif_status_cb(netif);
+    netif_set_link_callback(netif, netif_status_cb);
+  }
+#endif
+
+#if !STATIC_IP_ADDRESS && NO_SYS == 0 && LWIP_NETIF_API == 1
   netifapi_dhcp_start(netif);
 #endif
 
-  return retVal;
+  return retval;
+}
+
+void
+rtems_lwip_print_dhcp_info(void)
+{
+  struct netif *netif = rtems_lwip_get_netif(0);
+
+  if (dhcp_supplied_address(netif)) {
+    printf("DHCP information: \n\r");
+    printf("Address: %s\n\r", ip4addr_ntoa(netif_ip4_addr(netif)));
+    printf("Netmask: %s\n\r", ip4addr_ntoa(netif_ip4_netmask(netif)));
+    printf("Gateway: %s\n\r", ip4addr_ntoa(netif_ip4_gw(netif)));
+  } else {
+    printf("DHCP not bound\n\r");
+  }
 }
 
 int
-eth_lwip_get_netif_status_cmd(int argc, char *arg[])
+rtems_lwip_get_netif_status_cmd(int argc, char *arg[])
 {
   stats_display();
   return 0;
 }
 
 struct netif *
-eth_lwip_get_netif(uint32_t instance_number)
+rtems_lwip_get_netif(uint32_t instance_number)
 {
   if (instance_number >= MAX_EMAC_INSTANCE)
     return NULL;
   return &eth_lwip_netifs[instance_number];
-}
-
-static void
-eth_lwip_conv_IP_decimal_Str(ip_addr_t ip, uint8_t *ipStr)
-{
-  uint32_t addr;
- #if LWIP_IPV6
-  addr = ip.u_addr.ip4.addr;
- #else
-  addr = ip.addr;
- #endif
-
-  snprintf((char *)ipStr, 16, "%lu.%lu.%lu.%lu",
-           (addr >> 24), ((addr >> 16) & 0xff), ((addr >> 8) & 0xff), (addr & 0xff));
 }
 
 /*
@@ -153,7 +162,7 @@ eth_lwip_conv_IP_decimal_Str(ip_addr_t ip, uint8_t *ipStr)
 * @note    mac_addr[0] is considered MSB
 */
 void
-eth_lwip_set_hwaddr(struct netif *netif, uint8_t *mac_addr)
+rtems_lwip_set_hwaddr(struct netif *netif, uint8_t *mac_addr)
 {
   int i;
 
@@ -171,7 +180,7 @@ eth_lwip_set_hwaddr(struct netif *netif, uint8_t *mac_addr)
 }
 
 void
-eth_lwip_get_hwaddr_str(struct netif *netif, uint8_t *macStr)
+rtems_lwip_get_hwaddr_str(struct netif *netif, uint8_t *macStr)
 {
   uint8_t index, outindex = 0;
   char ch;
@@ -185,4 +194,33 @@ eth_lwip_get_hwaddr_str(struct netif *netif, uint8_t *macStr)
     macStr[outindex++] = (ch < 10) ? (ch + '0') : (ch - 10 + 'A');
   }
   macStr[outindex] = 0;
+}
+
+void rtems_lwip_determine_static_ipv4_address(ip4_addr_t* ip_addr, ip4_addr_t* netmask,
+        ip4_addr_t* gw_addr) {
+#if STATIC_IP_ADDRESS == 1
+
+#if CALCULATE_ETH_IP_ADDR == 1
+  IP_ADDR4(ip_addr, IP_ADDR0, IP_ADDR1, IP_ADDR2, IP_ADDR3);
+#else
+  ip_addr->addr = htonl(ETH_IP_ADDR);
+#endif
+
+#if CALCULATE_ETH_NETMASK == 1
+  IP_ADDR4(net_mask, NETMASK_ADDR0, NETMASK_ADDR1, NETMASK_ADDR2, NETMASK_ADDR3);
+#else
+  net_mask->addr = htonl(ETH_NETMASK);
+#endif
+
+#if CALCULATE_GW_ADDRESS == 1
+  IP_ADDR4(gw_addr, GW_ADDR0, GW_ADDR1, GW_ADDR2, GW_ADDR3);
+#else
+  gw_addr->addr = htonl(ETH_GW);
+#endif
+
+#else
+  ip_addr_set_zero_ip4(ip_addr);
+  ip_addr_set_zero_ip4(netmask);
+  ip_addr_set_zero_ip4(gw_addr);
+#endif /* STATIC_IP_ADDRESS == 0 */
 }

@@ -1,4 +1,14 @@
+# Eclipse files
+/.cproject
+/.project
+/.settings
+
+# Python
 __pycache__
+
+# Wad
 .lock-waf*
 .waf*
+
+# Builds
 build/

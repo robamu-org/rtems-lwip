@@ -31,30 +31,61 @@
  * Based on work of Carlos Jenkins, Rostislav Lisovy, Jan Dolezal
  */
 
-#ifndef __TMS570_NETIF_H
-#define __TMS570_NETIF_H
+#ifndef __ETH_LWIP_H
+#define __ETH_LWIP_H
 
-//#define TMS570_NETIF_DEBUG 1
+#include "lwip/netif.h"
+#include "rtems_lwip_conf.h"
 
-#ifdef TMS570_NETIF_DEBUG
-#define tms570_eth_debug_printf sys_arch_printk
-#else
-#define tms570_eth_debug_printf(...)
+#include <stdio.h>
+#include <stdbool.h>
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-err_t tms570_eth_init_netif(struct netif *netif);
-struct tms570_netif_state *tms570_eth_init_state();
+/**
+ * LwIP netif couldn't be added, it is likely that there was an error during initialization of the hardware.
+ */
+#define NETIF_ADD_ERR            -10 /* could be one of previous, except PHY_LINK_DOWN - currently */
 
-#if TMS570_NETIF_DEBUG
-struct emac_rx_bd;
-int tms570_eth_debug_get_BD_num(volatile void *ptr, struct tms570_netif_state *nf_state);
-void tms570_eth_debug_print_rxch(struct tms570_netif_state *nf_state);
-void tms570_eth_debug_print_txch(struct tms570_netif_state *nf_state);
-void tms570_eth_debug_show_BD_chain(volatile struct emac_rx_bd *curr_bd, struct tms570_netif_state *nf_state);
-void tms570_eth_debug_show_rx(struct tms570_netif_state *nf_state);
-void tms570_eth_debug_show_tx(struct tms570_netif_state *nf_state);
-void tms570_eth_debug_print_HDP(struct tms570_netif_state *nf_state);
-void tms570_eth_debug_print_info(struct netif *netif);
-#endif /* TMS570_NETIF_DEBUG */
+/**
+ * @brief   RTEMS lwIP initialization function.
+ *
+ * Call this method before using this module. This function also takes care of initializing
+ * the lwIP stack by calling lwip_init.
+ * @param   mac_addr            Can be set to NULL to use default mac address
+ * @param   netif_status_cb     Callback function which will be called if the network
+ *                              link status changes
+ * @return SUCCESS if initialization successful.\n
+ *         FAILURE if module already initialized.
+ */
+int8_t rtems_lwip_init(uint8_t *mac_addr, netif_status_callback_fn netif_status_cb);
 
-#endif /* __TMS570_NETIF_H */
+/**
+ * @brief   Access to the net interface instances
+ */
+struct netif *rtems_lwip_get_netif(uint32_t instance_number);
+
+/**
+ * @brief   Print information about the assigned DHCP address.
+ */
+void rtems_lwip_print_dhcp_info(void);
+int rtems_lwip_get_netif_status_cmd(int argc, char *arg[]);
+void rtems_lwip_set_hwaddr(struct netif *netif, uint8_t *mac_addr);
+void rtems_lwip_get_hwaddr_str(struct netif *netif, uint8_t *macStr);
+
+/**
+ * @brief   Determines a static IP address from the configuration files.
+ * @param ip_addr
+ * @param netmask
+ * @param gw
+ */
+void rtems_lwip_determine_static_ipv4_address(ip4_addr_t* ip_addr, ip4_addr_t* netmask,
+        ip4_addr_t* gw);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ETH_LWIP_H */

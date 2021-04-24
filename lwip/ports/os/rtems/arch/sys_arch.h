@@ -39,16 +39,22 @@
 #ifndef __ARCH_SYS_ARCH_H__
 #define __ARCH_SYS_ARCH_H__
 
+#include "lwip/opt.h"
+
+#if (NO_SYS != 0)
+#error "RTEMS SYS_ARCH cannot be compiled in NO_SYS variant"
+#endif
+
 #include <rtems/rtems/sem.h>
 #include <rtems/rtems/intr.h>
 #include <rtems/score/cpu.h>
 #include <bsp/irq-generic.h>
-//#include "eth_lwip_default.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* Typedefs for the various port-specific types. */
-#if defined(NO_SYS) && NO_SYS
-  #error "RTEMS SYS_ARCH cannot be compiled in NO_SYS variant"
-#endif
 
 #define sys_arch_printk printk
 
@@ -104,5 +110,9 @@ sys_arch_unmask_interrupt_source(unsigned int x)
 sys_prot_t sys_arch_protect();
 
 void sys_arch_unprotect(sys_prot_t pval);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __ARCH_SYS_ARCH_H__ */

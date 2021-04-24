@@ -31,13 +31,10 @@
  * Based on work of Carlos Jenkins, Rostislav Lisovy, Jan Dolezal
  */
 
-#ifndef __ETH_LWIP_H
-#define __ETH_LWIP_H
+#ifndef __TMS570_NETIF_H
+#define __TMS570_NETIF_H
 
-#include <stdio.h>
-#include <stdbool.h>
-#include "lwip/netif.h"
-
+//#define TMS570_NETIF_DEBUG 1
 
 /**
  * While scanning phy addresses no alive phy was found.
@@ -61,10 +58,6 @@
 #define PHY_LINK_DOWN            -3
 
 /**
- * LwIP netif couldn't be added, it is likely that there was an error during initialization of the hardware.
- */
-#define NETIF_ADD_ERR            -10 /* could be one of previous, except PHY_LINK_DOWN - currently */
-/**
  * Memory requirements couldn't be satisfied.
  */
 #define DHCP_MEM_ERR             -11
@@ -74,27 +67,25 @@
  */
 #define MAC_BIG_LETTERS           1
 
-/**
- * ETH module system startup initialization.
- *
- * Call this method before using this module.
- * This method starts autonegotiation and doesn't check for end of autoneg.
- * When eth module is about to be used, you have to run rpp_eth_init_postInit()
- * first and you should check whether link is up.
- *
- * @return SUCCESS if initialization successful.\n
- *         FAILURE if module already initialized.
- */
-int8_t eth_lwip_init(uint8_t *mac_addr);
-void eth_lwip_get_dhcp_info(void);
-int eth_lwip_get_netif_status_cmd(int argc, char *arg[]);
-void eth_lwip_set_hwaddr(struct netif *netif, uint8_t *mac_addr);
-void eth_lwip_get_hwaddr_str(struct netif *netif, uint8_t *macStr);
-struct netif *eth_lwip_get_netif(uint32_t instance_number);
+#ifdef TMS570_NETIF_DEBUG
+#define tms570_eth_debug_printf sys_arch_printk
+#else
+#define tms570_eth_debug_printf(...)
+#endif
 
+err_t tms570_eth_init_netif(struct netif *netif);
+struct tms570_netif_state *tms570_eth_init_state();
 
+#if TMS570_NETIF_DEBUG
+struct emac_rx_bd;
+int tms570_eth_debug_get_BD_num(volatile void *ptr, struct tms570_netif_state *nf_state);
+void tms570_eth_debug_print_rxch(struct tms570_netif_state *nf_state);
+void tms570_eth_debug_print_txch(struct tms570_netif_state *nf_state);
+void tms570_eth_debug_show_BD_chain(volatile struct emac_rx_bd *curr_bd, struct tms570_netif_state *nf_state);
+void tms570_eth_debug_show_rx(struct tms570_netif_state *nf_state);
+void tms570_eth_debug_show_tx(struct tms570_netif_state *nf_state);
+void tms570_eth_debug_print_HDP(struct tms570_netif_state *nf_state);
+void tms570_eth_debug_print_info(struct netif *netif);
+#endif /* TMS570_NETIF_DEBUG */
 
-
-
-
-#endif /* __ETH_LWIP_H */
+#endif /* __TMS570_NETIF_H */

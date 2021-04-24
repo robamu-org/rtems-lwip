@@ -39,6 +39,9 @@
 #ifndef __CC_H__
 #define __CC_H__
 
+/* Use timeval provided by RTEMS be defining this to 0 */
+#define LWIP_TIMEVAL_PRIVATE 0
+
 #include <stdio.h>
 #include <rtems/malloc.h>  /*printk*/
 #include <inttypes.h>
