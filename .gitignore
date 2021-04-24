@@ -6,7 +6,7 @@
 # Python
 __pycache__
 
-# Wad
+# Waf
 .lock-waf*
 .waf*
 
