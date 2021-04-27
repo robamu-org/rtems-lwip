@@ -37,15 +37,22 @@
  * DETAILS: ./lwip/doc/sys_arch.txt
  */
 
+
+/* lwIP includes. */
+#include "lwip/debug.h"
+#include "lwip/def.h"
+#include "lwip/sys.h"
+#include "lwip/mem.h"
+#include "lwip/stats.h"
+
+#if !NO_SYS
+
+#include "sys_arch.h"
 #include <stdint.h>
 #include <arch/cc.h>
 #include <rtems/rtems/clock.h>
 #include <rtems/rtems/sem.h>
 #include <rtems.h>
-#include "sys_arch.h"
-#include "lwip/err.h"
-#include "lwip/tcpip.h"
-#include "lwipopts.h"
 
 #define SYS_LWIP_MBOX_SIZE (sizeof(void *))
 
@@ -268,8 +275,21 @@ sys_thread_new(const char *name, lwip_thread_fn function, void *arg, int stack_s
   rtems_id id;
   rtems_status_code res;
 
+  rtems_name lwip_task_name = 0;
+  if(name == NULL) {
+    lwip_task_name = rtems_build_name('L', 'W', 'I', 'P');
+  }
+  else {
+    if(name[0] == '\0') {
+      lwip_task_name = rtems_build_name('L', 'W', 'I', 'P');
+    }
+    else {
+      lwip_task_name = rtems_build_name(name[0], name[1], name[2], name[3]);
+    }
+  }
+
   res = rtems_task_create(
-    rtems_build_name('L', 'W', 'I', 'P'),
+    lwip_task_name,
     prio,
     stack_size,
     RTEMS_PREEMPT,
@@ -375,4 +395,6 @@ sys_mbox_trypost_fromisr(sys_mbox_t *q, void *msg)
 {
   return sys_mbox_trypost(q, msg);
 }
+
+#endif /* NO_SYS == 0 */
 

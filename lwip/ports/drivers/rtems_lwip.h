@@ -34,67 +34,64 @@
 #ifndef __ETH_LWIP_H
 #define __ETH_LWIP_H
 
+#include "lwip/netif.h"
+#include "rtems_lwip_conf.h"
+
 #include <stdio.h>
 #include <stdbool.h>
-#include "lwip/netif.h"
 
-
-/**
- * While scanning phy addresses no alive phy was found.
- * Return value of rpp_eth_hw_init() function.
- */
-#define NO_PHY_ALIVE             -1
-/**
- * Scanning default phy address, it was found it's not alive.
- * Return value of rpp_eth_hw_init() function.
- */
-#define DFLT_PHY_NOT_ALIVE       -1
-/**
- * When setting autonegotiation parameters to EMAC module, there was found impossible mode (usually on timeout of autonegotiation).
- * Return value of rpp_eth_hw_init_postInit() function.
- */
-#define UNKN_DUPLEX_MODE         -2 /* this could mean that autonegotiation was not completed yet */
-/**
- * Phy is down error.
- * Return value of rpp_eth_init_postInit() function.
- */
-#define PHY_LINK_DOWN            -3
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * LwIP netif couldn't be added, it is likely that there was an error during initialization of the hardware.
  */
 #define NETIF_ADD_ERR            -10 /* could be one of previous, except PHY_LINK_DOWN - currently */
-/**
- * Memory requirements couldn't be satisfied.
- */
-#define DHCP_MEM_ERR             -11
 
 /**
- * configures whether rpp_eth_get_macAddrStr() creates string with big or small latin letters
- */
-#define MAC_BIG_LETTERS           1
-
-/**
- * ETH module system startup initialization.
+ * @brief   RTEMS lwIP initialization function.
  *
- * Call this method before using this module.
- * This method starts autonegotiation and doesn't check for end of autoneg.
- * When eth module is about to be used, you have to run rpp_eth_init_postInit()
- * first and you should check whether link is up.
- *
- * @return SUCCESS if initialization successful.\n
- *         FAILURE if module already initialized.
+ * Call this method before using this module. This function also takes care of initializing
+ * the lwIP stack by calling lwip_init.
+ * @param   mac_addr            Can be set to NULL to use default mac address
+ * @param   netif_status_cb     Callback function which will be called if the network
+ *                              link status changes
+ * @return
+ *  - SUCCESS if initialization successful.\n
+ *  - NETIF_ADD_ERR Error adding net interface.
  */
-int8_t eth_lwip_init(uint8_t *mac_addr);
-void eth_lwip_get_dhcp_info(void);
-int eth_lwip_get_netif_status_cmd(int argc, char *arg[]);
-void eth_lwip_set_hwaddr(struct netif *netif, uint8_t *mac_addr);
-void eth_lwip_get_hwaddr_str(struct netif *netif, uint8_t *macStr);
-struct netif *eth_lwip_get_netif(uint32_t instance_number);
+int8_t rtems_lwip_init(uint8_t *mac_addr, netif_status_callback_fn netif_status_cb);
 
+/**
+ * @brief   Access to the net interface instances
+ */
+struct netif *rtems_lwip_get_netif(uint32_t instance_number);
 
+/**
+ * @brief   Print information about the assigned DHCP address.
+ */
+void rtems_lwip_print_dhcp_info(void);
 
+void rtems_lwip_convert_ip_to_decimal_str(ip_addr_t ip, uint8_t *ip_str);
 
+int rtems_lwip_get_netif_status_cmd(int argc, char *arg[]);
 
+void rtems_lwip_set_hwaddr(struct netif *netif, uint8_t *mac_addr);
+
+void rtems_lwip_get_hwaddr_str(struct netif *netif, uint8_t *mac_str);
+
+/**
+ * @brief   Determines a static IP address from the configuration files.
+ * @param ip_addr
+ * @param netmask
+ * @param gw
+ */
+void rtems_lwip_determine_static_ipv4_address(ip4_addr_t* ip_addr, ip4_addr_t* netmask,
+        ip4_addr_t* gw);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __ETH_LWIP_H */
