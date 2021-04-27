@@ -1,0 +1,12 @@
+function(rtems_lwip_port_select RTEMS_BSP)
+    if(RTEMS_BSP MATCHES "arm/nucleo-h743zi" OR RTEMS_BSP MATCHES "arm/stm32h7")
+        set(RTEMS_LWIP_ADD_STM32H7_DRV ON CACHE INTERNAL "Add STM32H7 lwIP drivers")
+        if(RTEMS_BSP MATCHES "arm/nucleo-h743zi")
+            set(RTEMS_LWIP_NUCLEO_H743ZI_VARIANT ON CACHE INTERNAL "Nucleo-H743ZI board variant")
+        endif()
+    endif()
+
+    if(RTEMS_BSP MATCHES "arm/tms570")
+        set(RTEMS_LWIP_ADD_TMS_570_DRV ON CACHE INTERNAL "Add TMS570 lwIP drivers")
+    endif()
+endfunction()
