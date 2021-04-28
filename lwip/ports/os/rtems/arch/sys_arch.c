@@ -37,7 +37,6 @@
  * DETAILS: ./lwip/doc/sys_arch.txt
  */
 
-
 /* lwIP includes. */
 #include "lwip/debug.h"
 #include "lwip/def.h"

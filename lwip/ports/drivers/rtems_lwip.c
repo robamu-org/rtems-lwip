@@ -149,8 +149,9 @@ rtems_lwip_get_netif_status_cmd(int argc, char *arg[])
 struct netif *
 rtems_lwip_get_netif(uint32_t instance_number)
 {
-  if (instance_number >= MAX_EMAC_INSTANCE)
+  if (instance_number >= MAX_EMAC_INSTANCE) {
     return NULL;
+  }
   return &eth_lwip_netifs[instance_number];
 }
 
@@ -185,8 +186,9 @@ rtems_lwip_get_hwaddr_str(struct netif *netif, uint8_t *mac_str)
   char ch;
 
   for (index = 0; index < netif->hwaddr_len; index++) {
-    if (index)
+    if (index) {
       mac_str[outindex++] = ':';
+    }
     ch = (netif->hwaddr[index] >> 4);
     mac_str[outindex++] = (ch < 10) ? (ch + '0') : (ch - 10 + 'A');
     ch = (netif->hwaddr[index] & 0xf);
@@ -196,7 +198,7 @@ rtems_lwip_get_hwaddr_str(struct netif *netif, uint8_t *mac_str)
 }
 
 void
-rtems_lwip_convert_ip_to_decimal_str(ip_addr_t ip, uint8_t *ip_str)
+rtems_lwip_convert_ip_to_decimal_str(ip_addr_t ip, char *ip_str)
 {
   uint32_t addr;
  #if LWIP_IPV6

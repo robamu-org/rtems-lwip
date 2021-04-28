@@ -19,6 +19,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32h7xx_hal.h"
+#include "port_conf.h"
 #include "lwip/timeouts.h"
 #include "netif/ethernet.h"
 #include "netif/etharp.h"
@@ -34,29 +35,9 @@
 /* Private define ------------------------------------------------------------*/
 #define DMA_DESCRIPTOR_ALIGNMENT                ( 0x20 )
 
-/* RTEMS priorities range from 1 (highest) to 255 (lowest) */
-#ifndef RTEMS_LWIP_INTERFACE_THREAD_PRIORITY
-#define RTEMS_LWIP_INTERFACE_THREAD_PRIORITY    ( 50 )
-#endif
-
-/* Stack size of the interface thread */
-#ifndef RTEMS_LWIP_INTERFACE_THREAD_STACK_SIZE
-#define RTEMS_LWIP_INTERFACE_THREAD_STACK_SIZE  ( RTEMS_MINIMUM_STACK_SIZE )
-#endif
-
 /* Define those to better describe your network interface. */
 #define IFNAME0 's'
 #define IFNAME1 't'
-
-#ifndef RTEMS_LWIP_ETH_DMA_TRANSMIT_TIMEOUT
-#define RTEMS_LWIP_ETH_DMA_TRANSMIT_TIMEOUT     ( 20U )
-#endif
-
-/* The MPU protection is unreliable for the Socket API. The exact cause is not know yet.
-It's safer to always clean data cache for now */
-#ifndef RTEMS_LWIP_PROTECT_LWIP_HEAP_WITH_MPU
-#define RTEMS_LWIP_PROTECT_LWIP_HEAP_WITH_MPU     1
-#endif
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -80,6 +61,7 @@ It's safer to always clean data cache for now */
        to L1-CACHE line size (32 bytes).
 */
 
+#ifdef __rtems__
 netif_init_fn eth_lwip_init_fnc = &ethernetif_init;
 
 /* Put into special RTEMS section and align correctly */
@@ -88,6 +70,7 @@ ETH_DMADescTypeDef DMARxDscrTab[ETH_RX_DESC_CNT] __attribute__((section(".bsp_no
 ETH_DMADescTypeDef DMATxDscrTab[ETH_TX_DESC_CNT]  __attribute__((section(".bsp_nocache"), __aligned__(DMA_DESCRIPTOR_ALIGNMENT)));  /* Ethernet Tx DMA Descriptors */
 /* Ethernet Receive Buffers. Just place somewhere is BSS instead of explicitely placing it */
 uint8_t Rx_Buff[ETH_RX_DESC_CNT][ETH_RX_BUFFER_SIZE] RTEMS_ALIGNED(DMA_DESCRIPTOR_ALIGNMENT);
+#endif /* __rtems__ */
 
 ETH_HandleTypeDef EthHandle;
 ETH_TxPacketConfig TxConfig; 
@@ -146,9 +129,11 @@ err_t ethernetif_init(struct netif *netif)
 {
   LWIP_ASSERT("netif != NULL", (netif != NULL));
 
+#ifdef __rtems__
 #if RTEMS_LWIP_PROTECT_LWIP_HEAP_WITH_MPU == 1
   mpu_config_tx_buffers(LWIP_RAM_HEAP_POINTER, MEM_SIZE);
-#endif
+#endif /* RTEMS_LWIP_PROTECT_LWIP_HEAP_WITH_MPU == 1 */
+#endif /* __rtems__ */
 
 #if LWIP_NETIF_HOSTNAME
   /* Initialize interface hostname */
@@ -248,7 +233,8 @@ static void low_level_init(struct netif *netif)
   TxConfig.Attributes = ETH_TX_PACKETS_FEATURES_CSUM | ETH_TX_PACKETS_FEATURES_CRCPAD;
   TxConfig.ChecksumCtrl = ETH_CHECKSUM_IPHDR_PAYLOAD_INSERT_PHDR_CALC;
   TxConfig.CRCPadCtrl = ETH_CRC_PAD_INSERT;
-   
+
+#ifdef __rtems__
 #if NO_SYS == 0
   /* create a binary semaphore used for informing ethernetif of frame reception */
   sys_sem_new(&RxPktSemaphore, 1);
@@ -261,8 +247,8 @@ static void low_level_init(struct netif *netif)
     RTEMS_LWIP_INTERFACE_THREAD_STACK_SIZE,
     RTEMS_LWIP_INTERFACE_THREAD_PRIORITY
   );
-
-#endif
+#endif /* NO_SYS == 0 */
+#endif /* __rtems__ */
   
   /* Set PHY IO functions */
   LAN8742_RegisterBusIO(&LAN8742, &LAN8742_IOCtx);
@@ -311,9 +297,11 @@ static void low_level_init(struct netif *netif)
     MACConf.Speed = speed;
     HAL_ETH_SetMACConfig(&EthHandle, &MACConf);
     HAL_ETH_Start_IT(&EthHandle);
+#ifdef __rtems__
     /* Install the ETH IRQ for RTEMS */
     rtems_interrupt_handler_install(ETH_IRQn, NULL, RTEMS_INTERRUPT_UNIQUE,
         (rtems_interrupt_handler) &HAL_ETH_IRQHandler, &EthHandle);
+#endif
     netif_set_up(netif);
     netif_set_link_up(netif);
   }
@@ -354,6 +342,7 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
     Txbuffer[i].buffer = q->payload;
     Txbuffer[i].len = q->len;
 
+#ifdef __rtems__
     /* For the socket API, a custom send buffer might be used which is not protected by the
     MPU. Therefore, clean DCache here as well */
 #if RTEMS_LWIP_PROTECT_LWIP_HEAP_WITH_MPU == 0 || LWIP_SOCKET == 1
@@ -361,6 +350,7 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
     uint8_t *dataStart = q->payload;
     uint8_t *lineStart = (uint8_t *)((uint32_t)dataStart & ~31);
     SCB_CleanDCache_by_Addr((uint32_t *)lineStart, q->len + (dataStart - lineStart));
+#endif
 #endif
 
     if(i>0)
@@ -407,15 +397,14 @@ static struct pbuf * low_level_input(struct netif *netif)
   }
 
 #if NO_SYS == 0
-  if(HAL_ETH_GetRxDataBuffer(&EthHandle, RxBuff) == HAL_OK)
+  if(HAL_ETH_GetRxDataBuffer(&EthHandle, RxBuff) == HAL_OK) {
 #else
-  if (HAL_ETH_IsRxDataAvailable(&EthHandle))
-#endif
-  {
+  if (HAL_ETH_IsRxDataAvailable(&EthHandle)) {
+#endif /* NO_SYS != 0 */
 
 #if NO_SYS == 1
     HAL_ETH_GetRxDataBuffer(&EthHandle, RxBuff);
-#endif
+#endif /* NO_SYS == 1 */
 
     HAL_ETH_GetRxDataLength(&EthHandle, &framelength);
 
@@ -666,6 +655,7 @@ void ethernet_link_check_state(struct netif *netif)
   }
 }
 
+#ifdef __rtems__
 #if NO_SYS == 1
 /* Even for NO_SYS == 1 this needs to be implemented */
 uint32_t
@@ -674,7 +664,6 @@ sys_now()
   /* Forward call to HAL function which already implements returning millisecond ticks */
   return HAL_GetTick();
 }
-
 #endif /* NO_SYS == 1 */
 
 /* Configure the MPU for the lwIP heap. */
@@ -754,5 +743,6 @@ lan8742_Object_t* get_lan_phy_handle() {
 ETH_HandleTypeDef* get_eth_handle() {
   return &EthHandle;
 }
+#endif
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

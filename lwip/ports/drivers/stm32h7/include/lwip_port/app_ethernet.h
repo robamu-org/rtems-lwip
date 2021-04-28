@@ -34,14 +34,22 @@
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions ------------------------------------------------------- */
 void ethernet_link_status_updated(struct netif *netif);
-#if LWIP_DHCP
-void DHCP_Thread(void const * argument);
-#endif
 
 #if LWIP_NETIF_LINK_CALLBACK == 1 && NO_SYS == 1
+/**
+ * This function should be called in mainloop or in a dedicated thread and takes care of
+ * the ethernet link handling.
+ * @param netif
+ */
 void ethernet_link_periodic_handle(struct netif *netif);
 #endif
 
+/**
+ * Start a ethernet link thread with the given parameters.
+ * @param task_interval_ms
+ * @param task_stack
+ * @param task_priority
+ */
 void rtems_lwip_start_link_thread(uint32_t task_interval_ms,
     size_t task_stack, uint8_t task_priority);
 

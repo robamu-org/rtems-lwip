@@ -31,23 +31,26 @@ extern "C" {
 #define ETH_RX_BUFFER_SIZE                     (1536UL)
 
 /* Exported types ------------------------------------------------------------*/
+#ifdef __rtems__
 typedef struct {
  struct netif* netif;
  uint32_t task_interval_ms;
 } LwipThreadArgs;
+#endif /* __rtems__ */
 
-/* Structure that include link thread parameters */
 /* Exported functions ------------------------------------------------------- */
 err_t ethernetif_init(struct netif *netif);      
 void ethernetif_input(struct netif *netif);
 void ethernet_link_check_state(struct netif *netif);
 
+#ifdef __rtems__
 /**
  * This function can be used to protect the TX lwIP buffer region (lwIP Heap).
  * @param base_addr
  * @param region_size
  */
 void mpu_config_tx_buffers(uint32_t base_addr, size_t region_size);
+#endif /* __rtems__ */
 
 #ifdef __cplusplus
 }

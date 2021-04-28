@@ -73,12 +73,33 @@ struct netif *rtems_lwip_get_netif(uint32_t instance_number);
  */
 void rtems_lwip_print_dhcp_info(void);
 
-void rtems_lwip_convert_ip_to_decimal_str(ip_addr_t ip, uint8_t *ip_str);
+/**
+ * Convert the given IP to its string representation
+ * @param ip
+ * @param ip_str
+ */
+void rtems_lwip_convert_ip_to_decimal_str(ip_addr_t ip, char *ip_str);
 
+/**
+ * Get the netif status by calling the lwIP  stats_display function
+ * @param argc
+ * @param arg
+ * @return
+ */
 int rtems_lwip_get_netif_status_cmd(int argc, char *arg[]);
 
+/**
+ * Set the hardware (MAC) address
+ * @param netif
+ * @param mac_addr
+ */
 void rtems_lwip_set_hwaddr(struct netif *netif, uint8_t *mac_addr);
 
+/**
+ * Get the hardware (MAC) address
+ * @param netif
+ * @param mac_addr
+ */
 void rtems_lwip_get_hwaddr_str(struct netif *netif, uint8_t *mac_str);
 
 /**

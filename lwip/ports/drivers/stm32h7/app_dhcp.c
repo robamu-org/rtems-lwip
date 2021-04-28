@@ -1,5 +1,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "app_dhcp.h"
+#include "port_conf.h"
 #include "ethernetif.h"
 #include "stm32h7xx_hal.h"
 #include "lwip/opt.h"
@@ -14,40 +15,36 @@
 #include <sys/unistd.h>
 
 #if LWIP_DHCP
-
 #ifndef MAX_DHCP_TRIES
 #define MAX_DHCP_TRIES  4
-#endif
+#endif /* MAX_DHCP_TRIES */
 
 
 #if NO_SYS == 1
-uint32_t DHCPfineTimer = 0;
+static uint32_t DHCPfineTimer = 0;
 
 #ifndef RTEMS_LWIP_DHCP_TASK_INTERVAL_MS
 #define RTEMS_LWIP_DHCP_TASK_INTERVAL_MS 500
 #endif
 
-#endif
+#endif /* NO_SYS == 1*/
 
-void dhcp_thread(void* argument);
+static void dhcp_thread(void* argument);
 
 LwipThreadArgs dhcp_args;
-
 uint8_t DHCP_state = DHCP_START;
 
 #if NO_SYS == 0
-
 void rtems_lwip_start_dhcp_thread(uint32_t task_interval_ms,
     size_t task_stack, uint8_t task_priority) {
   dhcp_args.netif = rtems_lwip_get_netif(0);
   dhcp_args.task_interval_ms = task_interval_ms;
   sys_thread_new("DHCP", dhcp_thread, (void*) &dhcp_args, task_stack, task_priority);
 }
-
-#endif
+#endif /* NO_SYS == 0 */
 
 /**
- * @brief  DHCP Process
+ * @brief  This is the thread dedicated to DHCP handling
  * @param  argument: network interface
  * @retval None
  */
@@ -69,12 +66,14 @@ void dhcp_thread(void* argument)
     exit(1);
   }
 
-  for (;;)
-  {
-    switch (DHCP_state)
-    {
-    case DHCP_START:
-    {
+  if(args->task_interval_ms == 0) {
+    printf("dhcp_thread: Invalid task interval!\n\r");
+    exit(1);
+  }
+
+  for (;;) {
+    switch (DHCP_state) {
+    case DHCP_START: {
       ip_addr_set_zero_ip4(&netif->ip_addr);
       ip_addr_set_zero_ip4(&netif->netmask);
       ip_addr_set_zero_ip4(&netif->gw);
@@ -83,37 +82,34 @@ void dhcp_thread(void* argument)
       dhcp_start(netif);
     }
     break;
-    case DHCP_WAIT_ADDRESS:
-    {
-      if (dhcp_supplied_address(netif))
-      {
+    case DHCP_WAIT_ADDRESS: {
+      if (dhcp_supplied_address(netif)) {
         DHCP_state = DHCP_ADDRESS_ASSIGNED;
+#if RTEMS_LWIP_DHCP_PRINTOUT == 1
         printf("IP address assigned by a DHCP server: %s\n\r",
             ip4addr_ntoa(netif_ip4_addr(netif)));
+#endif
       }
-      else
-      {
+      else {
         dhcp = (struct dhcp *)netif_get_client_data(netif, LWIP_NETIF_CLIENT_DATA_INDEX_DHCP);
 
         /* DHCP timeout */
-        if (dhcp->tries > MAX_DHCP_TRIES)
-        {
+        if (dhcp->tries > MAX_DHCP_TRIES) {
           DHCP_state = DHCP_TIMEOUT;
-
+#if RTEMS_LWIP_DHCP_PRINTOUT == 1
           uint8_t iptxt[20];
           sprintf((char *)iptxt, "%s", ip4addr_ntoa(netif_ip4_addr(netif)));
           printf("DHCP timeout\n\r");
           printf("Setting static IP address %s..\n\r", iptxt);
+#endif
           /* Static address used */
           rtems_lwip_determine_static_ipv4_address(&ipaddr, &netmask, &gw);
           netif_set_addr(netif, ip_2_ip4(&ipaddr), ip_2_ip4(&netmask), ip_2_ip4(&gw));
-
         }
       }
     }
     break;
-    case DHCP_LINK_DOWN:
-    {
+    case DHCP_LINK_DOWN: {
       DHCP_state = DHCP_OFF;
     }
     break;
@@ -136,8 +132,7 @@ void DHCP_Process(struct netif *netif);
 void dhcp_periodic_handle(struct netif *netif)
 {
   /* Fine DHCP periodic process every 500ms */
-  if (HAL_GetTick() - DHCPfineTimer >= RTEMS_LWIP_DHCP_TASK_INTERVAL_MS)
-  {
+  if (HAL_GetTick() - DHCPfineTimer >= RTEMS_LWIP_DHCP_TASK_INTERVAL_MS) {
     DHCPfineTimer = HAL_GetTick();
     /* process DHCP state machine */
     DHCP_Process(netif);
@@ -155,10 +150,8 @@ void DHCP_Process(struct netif *netif)
   ip_addr_t netmask;
   ip_addr_t gw;
   struct dhcp *dhcp = NULL;
-  switch (DHCP_state)
-  {
+  switch (DHCP_state) {
   case DHCP_START: {
-
     ip_addr_set_zero_ip4(&netif->ip_addr);
     ip_addr_set_zero_ip4(&netif->netmask);
     ip_addr_set_zero_ip4(&netif->gw);
@@ -205,11 +198,13 @@ void DHCP_Process(struct netif *netif)
 
 #endif /* NO_SYS == 1 */
 
-void set_dhcp_state(uint8_t new_state) {
+void set_dhcp_state(uint8_t new_state)
+{
   DHCP_state = new_state;
 }
 
-uint8_t get_dhcp_state() {
+uint8_t get_dhcp_state()
+{
   return DHCP_state;
 }
 

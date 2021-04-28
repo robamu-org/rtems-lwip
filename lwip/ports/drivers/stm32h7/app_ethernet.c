@@ -34,8 +34,6 @@
 #include "app_dhcp.h"
 #include "ethernetif.h"
 
-void set_dhcp_state(uint8_t new_state);
-
 /* Private typedef -----------------------------------------------------------*/
 LwipThreadArgs linkArgs;
 
@@ -47,7 +45,10 @@ uint32_t ethernet_link_timer = 0;
 #endif
 
 /* Private function prototypes -----------------------------------------------*/
-void ethernet_link_thread( void* argument );
+#if LWIP_DHCP
+void set_dhcp_state(uint8_t new_state);
+#endif
+static void ethernet_link_thread( void* argument );
 lan8742_Object_t* get_lan_phy_handle();
 ETH_HandleTypeDef* get_eth_handle();
 
@@ -85,8 +86,7 @@ void ethernet_link_periodic_handle(struct netif *netif)
 {
   uint32_t time_now = HAL_GetTick();
   /* Ethernet Link every 100ms */
-  if (time_now - ethernet_link_timer >= 100)
-  {
+  if (time_now - ethernet_link_timer >= 100) {
     ethernet_link_timer = time_now;
     ethernet_link_check_state(netif);
   }
@@ -126,49 +126,53 @@ void ethernet_link_thread( void* argument )
     exit(1);
   }
 
+  if(args->task_interval_ms == 0) {
+    printf("ethernet_link_thread: Invalid task interval!\n\r");
+    exit(1);
+  }
+
   lan8742_Object_t* lan = get_lan_phy_handle();
   ETH_HandleTypeDef* eth = get_eth_handle();
-  for(;;)
-  {
+  for(;;) {
 
     PHYLinkState = LAN8742_GetLinkState(lan);
 
-    if(netif_is_link_up(netif) && (PHYLinkState <= LAN8742_STATUS_LINK_DOWN))
-    {
+    if(netif_is_link_up(netif) && (PHYLinkState <= LAN8742_STATUS_LINK_DOWN)) {
       HAL_ETH_Stop_IT(eth);
       netif_set_down(netif);
       netif_set_link_down(netif);
     }
-    else if(!netif_is_link_up(netif) && (PHYLinkState > LAN8742_STATUS_LINK_DOWN))
-    {
-      switch (PHYLinkState)
-      {
-      case LAN8742_STATUS_100MBITS_FULLDUPLEX:
+    else if(!netif_is_link_up(netif) && (PHYLinkState > LAN8742_STATUS_LINK_DOWN)) {
+      switch (PHYLinkState) {
+      case LAN8742_STATUS_100MBITS_FULLDUPLEX: {
         duplex = ETH_FULLDUPLEX_MODE;
         speed = ETH_SPEED_100M;
         linkchanged = 1;
         break;
-      case LAN8742_STATUS_100MBITS_HALFDUPLEX:
+      }
+      case LAN8742_STATUS_100MBITS_HALFDUPLEX: {
         duplex = ETH_HALFDUPLEX_MODE;
         speed = ETH_SPEED_100M;
         linkchanged = 1;
         break;
-      case LAN8742_STATUS_10MBITS_FULLDUPLEX:
+      }
+      case LAN8742_STATUS_10MBITS_FULLDUPLEX: {
         duplex = ETH_FULLDUPLEX_MODE;
         speed = ETH_SPEED_10M;
         linkchanged = 1;
         break;
-      case LAN8742_STATUS_10MBITS_HALFDUPLEX:
+      }
+      case LAN8742_STATUS_10MBITS_HALFDUPLEX: {
         duplex = ETH_HALFDUPLEX_MODE;
         speed = ETH_SPEED_10M;
         linkchanged = 1;
         break;
+      }
       default:
         break;
       }
 
-      if(linkchanged)
-      {
+      if(linkchanged) {
         /* Get MAC Config MAC */
         HAL_ETH_GetMACConfig(eth, &MACConf);
         MACConf.DuplexMode = duplex;

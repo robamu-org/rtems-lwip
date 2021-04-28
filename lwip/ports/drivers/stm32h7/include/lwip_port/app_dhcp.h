@@ -10,6 +10,10 @@
 extern "C" {
 #endif
 
+/**
+ * Get the state of the internal DHCP state machine
+ * @return
+ */
 uint8_t get_dhcp_state();
 
 /* DHCP process states */
@@ -21,11 +25,20 @@ uint8_t get_dhcp_state();
 #define DHCP_LINK_DOWN             (uint8_t) 5
 
 #if NO_SYS == 1
-
+/**
+ * This function should be called in mainloop or in a dedicated thread and takes care of
+ * the DHCP handling.
+ * @param netif
+ */
 void dhcp_periodic_handle(struct netif *netif);
-
 #else
 
+/**
+ * Start a DHCP thread with the given parameters.
+ * @param task_interval_ms
+ * @param task_stack
+ * @param task_priority
+ */
 void rtems_lwip_start_dhcp_thread(uint32_t task_interval_ms,
     size_t task_stack, uint8_t task_priority);
 
