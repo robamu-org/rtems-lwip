@@ -54,12 +54,14 @@
 #include <bsp/tms570.h>
 #include <bsp/tms570-pinmux.h>
 #include "arch/cc.h"
-#include "eth_lwip.h"
+#include "rtems_lwip.h"
 #include "tms570_netif.h"
 #include "ti_drv_emac.h"
 #include "ti_drv_mdio.h"
 #include "phy_dp83848h.h"
 #include "tms570_emac.h"
+
+netif_init_fn eth_lwip_init_fnc = &tms570_eth_init_netif;
 
 #define LINK_SPEED_OF_YOUR_NETIF_IN_BPS 10000000
 
@@ -150,6 +152,7 @@ static err_t tms570_eth_init_control_structures(struct netif *netif);
 static void tms570_eth_init_netif_fill(struct netif *netif);
 static void tms570_eth_init_buffer_descriptors(struct tms570_netif_state *nf_state);
 static void tms570_eth_init_set_pinmux();
+static void sys_arch_data_sync_barier();
 
 /***** initializing functions **********************************************/
 
@@ -1122,10 +1125,12 @@ tms570_eth_memp_avaible(int type)
     return;
   if (type != MEMP_PBUF_POOL)
     return;
-  netifapi_netif_common(eth_lwip_get_netif(0), tms570_eth_rx_pbuf_refill_single, NULL);
+  netifapi_netif_common(rtems_lwip_get_netif(0), tms570_eth_rx_pbuf_refill_single, NULL);
 }
 
-
+void sys_arch_data_sync_barier() {
+    _ARM_Data_synchronization_barrier();
+}
 
 #if TMS570_NETIF_DEBUG
 
