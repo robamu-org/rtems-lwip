@@ -10,6 +10,13 @@ Currently, the following RTEMS BSPs are supported:
 
 # Using this repository
 
+Start by cloning the submodules
+
+```sh
+git submodule init
+git submodule update
+```
+
 The repository contains the lwIP sources, the OS port for RTEMS and port files
 belonging to a RTEMS BSP.
 
@@ -29,4 +36,3 @@ The lwIP support can now be built like this:
 ./waf
 ./waf install
 ```
-
