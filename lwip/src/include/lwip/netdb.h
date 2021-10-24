@@ -114,6 +114,11 @@ struct addrinfo {
 
 #define NETDB_ELEM_SIZE           (sizeof(struct addrinfo) + sizeof(struct sockaddr_storage) + DNS_MAX_NAME_LENGTH + 1)
 
+#if LWIP_DNS_API_DECLARE_H_ERRNO
+/* application accessible error code set by the DNS API functions */
+extern int h_errno;
+#endif /* LWIP_DNS_API_DECLARE_H_ERRNO*/
+
 struct hostent *lwip_gethostbyname(const char *name);
 int lwip_gethostbyname_r(const char *name, struct hostent *ret, char *buf,
                 size_t buflen, struct hostent **result, int *h_errnop);
@@ -122,64 +127,6 @@ int lwip_getaddrinfo(const char *nodename,
        const char *servname,
        const struct addrinfo *hints,
        struct addrinfo **res);
-
-const char *hstrerror(int err);
-
-#include "lwip/sockets.h"
-
-#define EAI_OVERFLOW 208
-
- struct servent {
-      char  *s_name;       /* official service name */
-      char **s_aliases;    /* alias list */
-      int    s_port;       /* port number */
-      char  *s_proto;      /* protocol to use */
-   };
-
-/*
- * Error return codes from getaddrinfo()
- */
- #define EAI_ADDRFAMILY   1      /* address family for hostname not supported */
- #define EAI_NODATA       7      /* no address associated with hostname */
- #define EAI_SOCKTYPE    10      /* ai_socktype not supported */
- #define EAI_SYSTEM      11      /* system 6rror returned in errno */
- #define EAI_BADHINTS    12
- #define EAI_PROTOCOL    13
- #define EAI_MAX         14
-
-/*
- * Constants for getnameinfo()
- */
-#define    NI_MAXHOST  1025
-#define    NI_MAXSERV  32
-
-/*
- * Flag values for getnameinfo()
- */
-#define    NI_NOFQDN   0x00000001
-#define    NI_NUMERICHOST  0x00000002
-#define    NI_NAMEREQD 0x00000004
-#define    NI_NUMERICSERV  0x00000008
-#define    NI_DGRAM    0x00000010
-#define NI_WITHSCOPEID 0x00000020
-
-#ifndef AF_UNIX
-#define    AF_UNIX     1
-#endif
-
-int
-getnameinfo(const struct sockaddr *sa, socklen_t salen,
-           char *host, size_t hostlen,
-           char *serv, size_t servlen, int flags);
-
-const char *gai_strerror(int ecode);
-
-struct servent *getservbyname(const char *name, const char *proto);
-
-#if LWIP_DNS_API_DECLARE_H_ERRNO
-/* application accessible error code set by the DNS API functions */
-extern int h_errno;
-#endif /* LWIP_DNS_API_DECLARE_H_ERRNO*/
 
 #if LWIP_COMPAT_SOCKETS
 /** @ingroup netdbapi */
@@ -193,8 +140,6 @@ extern int h_errno;
 #define getaddrinfo(nodname, servname, hints, res) \
        lwip_getaddrinfo(nodname, servname, hints, res)
 #endif /* LWIP_COMPAT_SOCKETS */
-
-
 
 #ifdef __cplusplus
 }
