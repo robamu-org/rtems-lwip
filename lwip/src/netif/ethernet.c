@@ -40,7 +40,7 @@
 
 #include "lwip/opt.h"
 
-#ifdef LWIP_ETHERNET
+#if LWIP_ARP || LWIP_ETHERNET
 
 #include "netif/ethernet.h"
 #include "lwip/def.h"

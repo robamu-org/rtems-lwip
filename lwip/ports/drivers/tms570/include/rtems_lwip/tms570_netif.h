@@ -36,6 +36,37 @@
 
 //#define TMS570_NETIF_DEBUG 1
 
+/**
+ * While scanning phy addresses no alive phy was found.
+ * Return value of rpp_eth_hw_init() function.
+ */
+#define NO_PHY_ALIVE             -1
+/**
+ * Scanning default phy address, it was found it's not alive.
+ * Return value of rpp_eth_hw_init() function.
+ */
+#define DFLT_PHY_NOT_ALIVE       -1
+/**
+ * When setting autonegotiation parameters to EMAC module, there was found impossible mode (usually on timeout of autonegotiation).
+ * Return value of rpp_eth_hw_init_postInit() function.
+ */
+#define UNKN_DUPLEX_MODE         -2 /* this could mean that autonegotiation was not completed yet */
+/**
+ * Phy is down error.
+ * Return value of rpp_eth_init_postInit() function.
+ */
+#define PHY_LINK_DOWN            -3
+
+/**
+ * Memory requirements couldn't be satisfied.
+ */
+#define DHCP_MEM_ERR             -11
+
+/**
+ * configures whether rpp_eth_get_macAddrStr() creates string with big or small latin letters
+ */
+#define MAC_BIG_LETTERS           1
+
 #ifdef TMS570_NETIF_DEBUG
 #define tms570_eth_debug_printf sys_arch_printk
 #else

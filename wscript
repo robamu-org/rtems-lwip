@@ -46,9 +46,11 @@ def init(ctx):
 
 def options(opt):
     rtems.options(opt)
+    lwip.options(opt)
 
 
 def configure(conf):
+    lwip.configure(conf)
     rtems.configure(conf)
 
 

@@ -1,4 +1,10 @@
+# Python
 __pycache__
+
+# Waf
 .lock-waf*
 .waf*
+/*.pyc
+
+# Builds
 build/
