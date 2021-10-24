@@ -17,6 +17,16 @@ It is recommended that the user supplies the `lwipopts.h` configuration file. Th
 contain template option files to get started. The user can copy and rename this files into the
 application and then pass the include path to the build system using the `--lwip-opts` option.
 
+# Applying the STM32 patch file
+
+Some STM32 files are problematic due to the used license. Therefore, they are applied in form of
+a patch. You need to perform the following steps in order to use the STM32H7 BSP:
+
+```sh
+wget -O stm32.patch https://raw.githubusercontent.com/robamu-org/rtems-stm32-lwip-port-patch/main/stm32-bsp-eth-dhcp-files.patch
+git am stm32.patch
+```
+
 # Building with waf
 
 It is assumed that the path(s) containing the `lwipopts.h` file was stored in the environmental
